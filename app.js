@@ -65,6 +65,14 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.className = state.theme === 'calm' ? 'calm-mode' : '';
         document.getElementById('theme-toggle-btn').textContent = state.theme === 'calm' ? '💖' : '🌙';
     }
+    
+    // --- UI NAVIGATION ---
+    function showSection(sectionName) {
+        document.querySelectorAll('.section.active').forEach(s => s.classList.remove('active'));
+        document.getElementById(sectionName).classList.add('active');
+        document.querySelectorAll('.nav-btn.active').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.nav-btn[data-section="${sectionName}"]`).classList.add('active');
+    }
 
     // --- PROFILE WIZARD & DISPLAY ---
     function showProfileWizard() {
@@ -100,7 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleProfileSave() {
-        const isNewUser = !state.currentUser;
         const prompts = {
             communication: document.getElementById('prompt-communication').value,
             comfort: document.getElementById('prompt-comfort').value,
@@ -223,8 +230,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (action === 'explore') {
             state.currentUser.interestedIn[profileId] = true;
             const otherProfile = state.profiles.find(p => p.id === profileId);
-            // For demo, we auto-reciprocate interest
-            if(otherProfile) otherProfile.interestedIn[state.currentUser.id] = true; 
+            if(otherProfile) {
+                if(!otherProfile.interestedIn) otherProfile.interestedIn = {}; // Ensure object exists
+                otherProfile.interestedIn[state.currentUser.id] = true; 
+            }
             alert(`You've expressed interest in ${otherProfile.name}. If it's mutual, they'll appear in your 'Mutual Interests' tab.`);
         } else if (action === 'hide') {
             state.currentUser.interactions[profileId] = 'hidden';
@@ -239,11 +248,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function calculateCompatibility(user1, user2) {
         const green = [], yellow = [];
-        // Green flags (direct positive matches)
+        if (!user1.preferences || !user2.preferences) return { green, yellow }; // Safety check
         if (user1.preferences.initiation.includes('init_self') && user2.preferences.initiation.includes('init_other')) green.push(`${user2.name} likes others to initiate, and you like to initiate!`);
         if (user2.preferences.initiation.includes('init_self') && user1.preferences.initiation.includes('init_other')) green.push(`You like others to initiate, and ${user2.name} likes to initiate!`);
         if (user1.preferences.comfort.includes('comfort_cuddle') && user2.preferences.comfort.includes('comfort_cuddle')) green.push(`You both enjoy cuddling afterwards.`);
-        // Yellow flags (differences to discuss)
         if (user1.preferences.verbal.includes('verb_min') && !user2.preferences.verbal.includes('verb_min')) yellow.push(`You prefer minimal talking, while ${user2.name} is more verbal. Good to chat about!`);
         if (!user1.preferences.verbal.includes('verb_min') && user2.preferences.verbal.includes('verb_min')) yellow.push(`${user2.name} prefers minimal talking, while you are more verbal. Good to chat about!`);
         return { green, yellow };
@@ -273,18 +281,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.getElementById('guide-title').textContent = `Interaction Guide for You & ${partner.name}`;
 
-        // Shared Ground
         const { green } = calculateCompatibility(state.currentUser, partner);
         document.getElementById('guide-shared-ground').innerHTML = green.length > 0
             ? green.map(n => `<li>${n}</li>`).join('')
             : `<li>You both expressed interest in connecting! That's a great start.</li>`;
             
-        // Notes
         document.getElementById('guide-notes').innerHTML = `
             <div class="note-block"><strong>For interacting with ${partner.name}:</strong><br>${partner.prompts.comfort}</div>
             <div class="note-block"><strong>For interacting with you:</strong><br>${state.currentUser.prompts.comfort}</div>`;
 
-        // Icebreakers
         document.getElementById('guide-icebreakers').innerHTML = `
             <li>"Hey ${partner.name}! I saw on our guide we're a potential match. I was drawn to your profile because..."</li>
             <li>"Hi! The guide mentioned you feel comfortable when <em>'${partner.prompts.comfort}'</em>. I'd love to hear more about what that means to you."</li>
@@ -293,9 +298,65 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('interaction-guide-modal').style.display = 'flex';
     }
 
-    // --- UTILITIES & GLOBAL ACCESS ---
-    function getPreferenceTextById(id) { /* ... for print card ... */ }
-    function generatePrintCard() { /* ... unchanged ... */ }
+    // --- [FIX] IMPLEMENTED THIS HELPER FUNCTION ---
+    function getPreferenceTextById(id) {
+        for (const category in state.preferences) {
+            const pref = state.preferences[category].find(p => p.id === id);
+            if (pref) return pref.text;
+        }
+        return ''; // Return empty string if not found
+    }
+
+    // --- [FIX] IMPLEMENTED THE FULL PRINT CARD FUNCTION ---
+    function generatePrintCard() {
+        if (!state.currentUser) {
+            alert('Please complete your profile first!');
+            return;
+        }
+        const u = state.currentUser;
+        const printCard = document.createElement('div');
+        printCard.className = 'print-card print-only';
+
+        const preferencesList = Object.keys(u.preferences).map(category => {
+            if (u.preferences[category].length === 0) return '';
+            const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1);
+            const prefs = u.preferences[category].map(getPreferenceTextById).join('<br>• ');
+            return `<div style="margin-bottom: 10px;"><strong>${categoryTitle}:</strong><br>• ${prefs}</div>`;
+        }).join('');
+
+        const profileUrl = `https://example.com/profile/${u.id}`; // A placeholder URL
+        
+        printCard.innerHTML = `
+            <h3>💕 ${u.name}'s Preferences Card 💕</h3>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <strong>Age:</strong> ${u.age} | <strong>Experience:</strong> ${u.experience}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>A bit about my communication style:</strong><br>${u.prompts.communication || 'N/A'}
+            </div>
+            <hr style="border: none; border-top: 1px dashed #ccc; margin: 15px 0;">
+            ${preferencesList}
+            <div style="margin-bottom: 10px;">
+                <strong>🌈 Sensory Notes:</strong><br>${u.stimulation || 'No specific notes.'}
+            </div>
+            <div id="print-qrcode"></div>
+            <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+                Scan to see my full profile on Personal Group Coordination App 💖
+            </div>
+        `;
+        
+        document.body.appendChild(printCard);
+        
+        const qr = qrcode(0, 'L');
+        qr.addData(profileUrl);
+        qr.make();
+        document.getElementById('print-qrcode').innerHTML = qr.createImgTag(4);
+
+        window.print();
+        document.body.removeChild(printCard);
+    }
+    
+    // --- SAMPLE DATA for first-time use ---
     function loadSampleData() {
         state.profiles = [
             { id: 'user_1', name: 'Alex', age: 28, experience: 'some', prompts: { communication: 'Direct and clear.', comfort: 'I like when we have a plan first.', interaction: 'Ask me about my latest hobby.' }, preferences: { initiation: ['init_ask'], verbal: ['verb_some'], comfort: ['comfort_cuddle'] }, stimulation: 'Softer lighting', interestedIn: {}, interactions: {} },
