@@ -37,7 +37,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('editProfileBtn').addEventListener('click', showProfileWizard);
         document.getElementById('printCardBtn').addEventListener('click', generatePrintCard);
         
-        // Modal Listeners
         const modal = document.getElementById('interaction-guide-modal');
         modal.querySelector('.modal-close').addEventListener('click', () => modal.style.display = 'none');
         modal.querySelector('#start-chat-btn').addEventListener('click', () => {
@@ -48,14 +47,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- STATE & THEME ---
     function saveState() { localStorage.setItem('appState', JSON.stringify(state)); }
+
     function loadState() {
         const savedState = localStorage.getItem('appState');
         if (savedState) {
             state = JSON.parse(savedState);
+            
+            // --- [THE FIX] ---
+            // This is the data migration logic. It ensures that if a user loads an 
+            // older state from localStorage, their profile has the newer properties 
+            // required by the app, preventing crashes.
+            if (state.currentUser) {
+                state.currentUser.interactions = state.currentUser.interactions || {};
+                state.currentUser.interestedIn = state.currentUser.interestedIn || {};
+                state.currentUser.preferences = state.currentUser.preferences || {};
+                state.currentUser.prompts = state.currentUser.prompts || {};
+            }
+
+            // Also sanitize all other profiles in the state
+            state.profiles.forEach(p => {
+                p.interactions = p.interactions || {};
+                p.interestedIn = p.interestedIn || {};
+                p.prompts = p.prompts || {};
+            });
+
         } else {
             loadSampleData();
         }
     }
+
     function toggleTheme() {
         state.theme = state.theme === 'default' ? 'calm' : 'default';
         applyTheme();
@@ -156,12 +176,16 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('stimulation').value = u.stimulation || '';
         
         document.querySelectorAll('#preferencesAccordion input[type="checkbox"]').forEach(cb => cb.checked = false);
-        Object.keys(u.preferences).forEach(cat => {
-            u.preferences[cat].forEach(prefId => {
-                const checkbox = document.getElementById(prefId);
-                if (checkbox) checkbox.checked = true;
+        if (u.preferences) {
+            Object.keys(u.preferences).forEach(cat => {
+                if(u.preferences[cat]) {
+                    u.preferences[cat].forEach(prefId => {
+                        const checkbox = document.getElementById(prefId);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
             });
-        });
+        }
     }
 
     // --- UI SETUP (Accordions, etc.) ---
@@ -211,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return `
             <div class="profile-card" data-profile-id="${profile.id}">
                 <div class="profile-name">${profile.name}, ${profile.age}</div>
-                <p style="color: #666; margin-top: 5px;">${profile.prompts.communication}</p>
+                <p style="color: #666; margin-top: 5px;">${profile.prompts.communication || ''}</p>
                 ${green.length > 0 ? `<div class="compatibility-notes"><ul>${green.map(n => `<li>✔️ ${n}</li>`).join('')}</ul></div>` : ''}
                 ${yellow.length > 0 ? `<div class="compatibility-notes yellow"><ul>${yellow.map(n => `<li>⚠️ ${n}</li>`).join('')}</ul></div>` : ''}
                 <div class="match-actions">
@@ -231,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
             state.currentUser.interestedIn[profileId] = true;
             const otherProfile = state.profiles.find(p => p.id === profileId);
             if(otherProfile) {
-                if(!otherProfile.interestedIn) otherProfile.interestedIn = {}; // Ensure object exists
+                if(!otherProfile.interestedIn) otherProfile.interestedIn = {}; 
                 otherProfile.interestedIn[state.currentUser.id] = true; 
             }
             alert(`You've expressed interest in ${otherProfile.name}. If it's mutual, they'll appear in your 'Mutual Interests' tab.`);
@@ -248,12 +272,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function calculateCompatibility(user1, user2) {
         const green = [], yellow = [];
-        if (!user1.preferences || !user2.preferences) return { green, yellow }; // Safety check
-        if (user1.preferences.initiation.includes('init_self') && user2.preferences.initiation.includes('init_other')) green.push(`${user2.name} likes others to initiate, and you like to initiate!`);
-        if (user2.preferences.initiation.includes('init_self') && user1.preferences.initiation.includes('init_other')) green.push(`You like others to initiate, and ${user2.name} likes to initiate!`);
-        if (user1.preferences.comfort.includes('comfort_cuddle') && user2.preferences.comfort.includes('comfort_cuddle')) green.push(`You both enjoy cuddling afterwards.`);
-        if (user1.preferences.verbal.includes('verb_min') && !user2.preferences.verbal.includes('verb_min')) yellow.push(`You prefer minimal talking, while ${user2.name} is more verbal. Good to chat about!`);
-        if (!user1.preferences.verbal.includes('verb_min') && user2.preferences.verbal.includes('verb_min')) yellow.push(`${user2.name} prefers minimal talking, while you are more verbal. Good to chat about!`);
+        if (!user1.preferences || !user2.preferences) return { green, yellow };
+        if (user1.preferences.initiation?.includes('init_self') && user2.preferences.initiation?.includes('init_other')) green.push(`${user2.name} likes others to initiate, and you like to initiate!`);
+        if (user2.preferences.initiation?.includes('init_self') && user1.preferences.initiation?.includes('init_other')) green.push(`You like others to initiate, and ${user2.name} likes to initiate!`);
+        if (user1.preferences.comfort?.includes('comfort_cuddle') && user2.preferences.comfort?.includes('comfort_cuddle')) green.push(`You both enjoy cuddling afterwards.`);
+        if (user1.preferences.verbal?.includes('verb_min') && !user2.preferences.verbal?.includes('verb_min')) yellow.push(`You prefer minimal talking, while ${user2.name} is more verbal. Good to chat about!`);
+        if (!user1.preferences.verbal?.includes('verb_min') && user2.preferences.verbal?.includes('verb_min')) yellow.push(`${user2.name} prefers minimal talking, while you are more verbal. Good to chat about!`);
         return { green, yellow };
     }
 
@@ -287,8 +311,8 @@ document.addEventListener('DOMContentLoaded', function() {
             : `<li>You both expressed interest in connecting! That's a great start.</li>`;
             
         document.getElementById('guide-notes').innerHTML = `
-            <div class="note-block"><strong>For interacting with ${partner.name}:</strong><br>${partner.prompts.comfort}</div>
-            <div class="note-block"><strong>For interacting with you:</strong><br>${state.currentUser.prompts.comfort}</div>`;
+            <div class="note-block"><strong>For interacting with ${partner.name}:</strong><br>${partner.prompts.comfort || 'They haven\'t specified.'}</div>
+            <div class="note-block"><strong>For interacting with you:</strong><br>${state.currentUser.prompts.comfort || 'You haven\'t specified.'}</div>`;
 
         document.getElementById('guide-icebreakers').innerHTML = `
             <li>"Hey ${partner.name}! I saw on our guide we're a potential match. I was drawn to your profile because..."</li>
@@ -298,16 +322,15 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('interaction-guide-modal').style.display = 'flex';
     }
 
-    // --- [FIX] IMPLEMENTED THIS HELPER FUNCTION ---
+    // --- UTILITIES ---
     function getPreferenceTextById(id) {
         for (const category in state.preferences) {
             const pref = state.preferences[category].find(p => p.id === id);
             if (pref) return pref.text;
         }
-        return ''; // Return empty string if not found
+        return '';
     }
 
-    // --- [FIX] IMPLEMENTED THE FULL PRINT CARD FUNCTION ---
     function generatePrintCard() {
         if (!state.currentUser) {
             alert('Please complete your profile first!');
@@ -324,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return `<div style="margin-bottom: 10px;"><strong>${categoryTitle}:</strong><br>• ${prefs}</div>`;
         }).join('');
 
-        const profileUrl = `https://example.com/profile/${u.id}`; // A placeholder URL
+        const profileUrl = `https://example.com/profile/${u.id}`;
         
         printCard.innerHTML = `
             <h3>💕 ${u.name}'s Preferences Card 💕</h3>
