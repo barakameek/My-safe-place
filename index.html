@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Group Coordination</title>
-    <!-- Link to the external CSS file -->
     <link rel="stylesheet" href="style.css">
-    <!-- QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.js"></script>
 </head>
 <body>
@@ -14,95 +12,128 @@
         <header class="header">
             <h1>Personal Group Coordination</h1>
             <p>Connect with like-minded individuals for group activities</p>
+            <button id="theme-toggle-btn" title="Toggle Calm Mode">🌙</button>
         </header>
 
         <nav class="nav">
             <button class="nav-btn active" data-section="profile">My Profile</button>
             <button class="nav-btn" data-section="browse">Browse People</button>
             <button class="nav-btn" data-section="matches">Mutual Interests</button>
-            <button class="nav-btn" data-section="calendar">Schedule</button>
         </nav>
 
-        <!-- Profile Section -->
+        <!-- Profile Section with Wizard -->
         <section id="profile" class="section active">
-            <h2>✨ Create Your Profile ✨</h2>
-            <form id="profileForm">
-                <div class="form-group">
-                    <label for="name">Name/Nickname:</label>
-                    <input type="text" id="name" required>
+            <div id="profile-wizard">
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" style="width: 25%;"></div>
                 </div>
-                <div class="form-group">
-                    <label for="age">Age:</label>
-                    <input type="number" id="age" min="18" required>
-                </div>
-                <div class="form-group">
-                    <label for="bio">About Me:</label>
-                    <textarea id="bio" rows="4" placeholder="Tell others about yourself, your communication style, what you're looking for..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Sexual Play & Comfort Preferences:</label>
-                    <div id="preferencesContainer">
-                        <!-- Preference categories will be populated by JavaScript -->
+
+                <!-- Step 1: The Basics -->
+                <div class="wizard-step active" data-step="1">
+                    <h2>✨ Step 1: The Basics</h2>
+                    <div class="form-group">
+                        <label for="name">Name/Nickname:</label>
+                        <input type="text" id="name" required>
                     </div>
+                    <div class="form-group">
+                        <label for="age">Age:</label>
+                        <input type="number" id="age" min="18" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="experience">My experience level with group play is:</label>
+                        <select id="experience">
+                            <option value="new">New to it</option>
+                            <option value="some">I have some experience</option>
+                            <option value="experienced">I'm very experienced</option>
+                        </select>
+                    </div>
+                    <button class="btn wizard-next">Next →</button>
                 </div>
-                <div class="form-group">
-                    <label for="experience">Experience Level:</label>
-                    <select id="experience">
-                        <option value="new">New to group play</option>
-                        <option value="some">Some group experience</option>
-                        <option value="experienced">Experienced with groups</option>
-                    </select>
+
+                <!-- Step 2: About Me (Structured) -->
+                <div class="wizard-step" data-step="2">
+                    <h2>✨ Step 2: About Me</h2>
+                    <p class="step-intro">Help others understand you. These are optional!</p>
+                    <div class="form-group">
+                        <label for="prompt-communication">My communication style is best described as...</label>
+                        <input type="text" id="prompt-communication" placeholder="e.g., Direct, a bit shy at first, humorous...">
+                    </div>
+                    <div class="form-group">
+                        <label for="prompt-comfort">I feel most comfortable and safe when...</label>
+                        <input type="text" id="prompt-comfort" placeholder="e.g., we have a clear plan, people ask me questions...">
+                    </div>
+                    <div class="form-group">
+                        <label for="prompt-interaction">A great way to start an interaction with me is...</label>
+                        <input type="text" id="prompt-interaction" placeholder="e.g., by asking about my day, complimenting my profile...">
+                    </div>
+                    <button class="btn-secondary wizard-back">← Back</button>
+                    <button class="btn wizard-next">Next →</button>
                 </div>
-                <div class="form-group">
-                    <label for="stimulation">Sensory Notes:</label>
-                    <textarea id="stimulation" rows="3" placeholder="Describe what types of touch, sounds, lighting, etc. work best for you or should be avoided..."></textarea>
+                
+                <!-- Step 3: Preferences -->
+                <div class="wizard-step" data-step="3">
+                    <h2>✨ Step 3: My Preferences</h2>
+                     <p class="step-intro">Select what feels right for you. Click titles to expand.</p>
+                    <div id="preferencesAccordion">
+                        <!-- Accordion will be populated by JS -->
+                    </div>
+                    <button class="btn-secondary wizard-back">← Back</button>
+                    <button class="btn wizard-next">Next →</button>
                 </div>
-                <div class="form-group">
-                    <label for="scripts">Helpful Conversation Starters:</label>
-                    <textarea id="scripts" rows="3" placeholder="Any phrases or conversation topics that help you feel comfortable? e.g. 'I like when people ask how I'm feeling'"></textarea>
+
+                <!-- Step 4: Sensory & Final -->
+                <div class="wizard-step" data-step="4">
+                    <h2>✨ Step 4: Final Touches</h2>
+                    <div class="form-group">
+                        <label for="stimulation">Sensory Notes (optional)</label>
+                        <textarea id="stimulation" rows="3" placeholder="e.g., I prefer dim lighting, I don't like strong smells, gentle touch is best..."></textarea>
+                    </div>
+                    <button class="btn-secondary wizard-back">← Back</button>
+                    <button class="btn" id="saveProfileBtn">💖 Save My Profile</button>
                 </div>
-                <button type="submit" class="btn">💖 Save My Profile</button>
-                <button type="button" class="btn" id="printCardBtn" style="margin-left: 10px;">🖨️ Create Print Card</button>
-            </form>
+            </div>
+            <div id="profile-display" style="display: none;">
+                 <h2>✨ Your Profile ✨</h2>
+                 <p>Your profile is saved. You can edit it again at any time.</p>
+                 <button class="btn" id="editProfileBtn">Edit My Profile</button>
+                 <button type="button" class="btn" id="printCardBtn" style="margin-left: 10px;">🖨️ Create Print Card</button>
+            </div>
         </section>
 
         <!-- Browse Section -->
         <section id="browse" class="section">
             <h2>✨ Browse People ✨</h2>
-            <div class="filter-container">
-                <input type="text" id="filterName" placeholder="Filter by name...">
-                <select id="filterExperience">
-                    <option value="">All Experience Levels</option>
-                    <option value="new">New</option>
-                    <option value="some">Some Experience</option>
-                    <option value="experienced">Experienced</option>
-                </select>
-            </div>
-            <div id="profilesList">
-                <!-- Profiles will be populated here -->
-            </div>
+            <div id="profilesList"></div>
         </section>
 
         <!-- Matches Section -->
         <section id="matches" class="section">
             <h2>✨ Mutual Interests ✨</h2>
-            <div id="mutualMatches">
-                <!-- Mutual matches will be shown here -->
-            </div>
-        </section>
-
-        <!-- Calendar Section -->
-        <section id="calendar" class="section">
-            <h2>✨ Availability Calendar ✨</h2>
-            <p>Click days when you're available for group activities:</p>
-            <div class="calendar" id="availabilityCalendar">
-                <!-- Calendar will be generated here -->
-            </div>
-            <button class="btn" id="saveAvailabilityBtn" style="margin-top: 20px;">Save Availability</button>
+            <div id="mutualMatches"></div>
         </section>
     </div>
 
-    <!-- Link to the external JavaScript file -->
+    <!-- Interaction Guide Modal -->
+    <div id="interaction-guide-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close">×</button>
+            <h2 id="guide-title">Interaction Guide</h2>
+            <div class="guide-section">
+                <h3>✔️ Shared Ground</h3>
+                <ul id="guide-shared-ground"></ul>
+            </div>
+            <div class="guide-section">
+                <h3>💡 Things to Keep in Mind</h3>
+                <div id="guide-notes"></div>
+            </div>
+            <div class="guide-section">
+                <h3>💬 Suggested Icebreakers</h3>
+                <ul id="guide-icebreakers"></ul>
+            </div>
+            <button class="btn" id="start-chat-btn">Start Chatting</button>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
